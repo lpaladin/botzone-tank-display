@@ -1,0 +1,238 @@
+body {
+    overflow: hidden;
+    background-color: black;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+}
+
+#texture {
+    display: none;
+}
+
+#main {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+}
+
+#result {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    left: 0;
+    right: 0;
+    background: linear-gradient(to bottom, rgba(255, 255, 255, 0.7), rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.7));
+    padding: 1em 0;
+    text-align: center;
+    pointer-events: none;
+    opacity: 0;
+}
+
+#result .side-0 {
+    color: blue;
+    margin-right: 0.1em;
+}
+
+#result .side-1 {
+    color: red;
+    margin-right: 0.1em;
+}
+
+#resultTitle {
+    font-size: 1.5em;
+    padding: 0.3em;
+    color: gold;
+    text-shadow: black 0 1px, black 1px 0, black -1px 0 0, black 0 -1px 0;
+}
+
+#resultMessage {
+    padding: 0.3em;
+}
+
+.action-panel {
+    position: absolute;
+    left: 0;
+    top: 0;
+    transform: translate(-50%, -50%);
+    display: none;
+    opacity: 0.5;
+}
+
+.action-panel:hover {
+    opacity: 1;
+}
+
+.action-panel button {
+    font-size: 1.5em;
+    height: 2em;
+    width: 2em;
+    border-radius: 10em;
+    outline: none;
+    border: none;
+    background-color: white;
+}
+
+@keyframes scale {
+    from {
+        transform: scale(1);
+    }
+    to {
+        transform: scale(1.25);
+    }
+}
+
+.action-panel button.initial-button {
+    margin: -1em 0 0 -1em;
+    height: 4em;
+    width: 4em;
+    animation: scale 1s alternate infinite;
+}
+
+.hover-expand {
+    position: absolute;
+}
+
+.hover-expand-extra {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.hover-expand-extra > .move-on-hover {
+    position: absolute;
+    transition: transform 0.2s;
+}
+
+.hover-expand:hover > .hover-expand-extra > .move-on-hover.left {
+    transform: translateX(-100%);
+}
+.hover-expand:hover > .hover-expand-extra > .move-on-hover.right {
+    transform: translateX(100%);
+}
+.hover-expand:hover > .hover-expand-extra > .move-on-hover.up {
+    transform: translateY(-100%);
+}
+.hover-expand:hover > .hover-expand-extra > .move-on-hover.down {
+    transform: translateY(100%);
+}
+.hover-expand:hover > .hover-expand-extra > .move-on-hover.semi-left {
+    transform: translateX(-50%);
+}
+.hover-expand:hover > .hover-expand-extra > .move-on-hover.semi-right {
+    transform: translateX(50%);
+}
+.hover-expand:hover > .hover-expand-extra > .move-on-hover.semi-up {
+    transform: translateY(-50%);
+}
+.hover-expand:hover > .hover-expand-extra > .move-on-hover.semi-down {
+    transform: translateY(50%);
+}
+
+.hover-expand:hover > .hover-expand-initial {
+    opacity: 0;
+}
+
+.hover-expand:hover > .hover-expand-extra {
+    display: inherit;
+    opacity: 1;
+}
+
+.player-data {
+    position: absolute;
+    text-align: center;
+}
+
+.player-data > * {
+    position: relative;
+    z-index: 1;
+}
+
+.player-data canvas {
+    position: absolute;
+    left: 0;
+    right: 0;
+    z-index: 0;
+}
+
+.player-data.player-0 canvas {
+    top: 0;
+    transform: rotate(180deg);
+}
+
+.player-data.player-1 canvas {
+    bottom: 0;
+}
+
+.player-data.player-0 {
+    right: 100%;
+    top: 0;
+    bottom: 0;
+    /* background: linear-gradient(to bottom, lightblue, transparent); */
+}
+
+.player-data.player-1 {
+    left: 100%;
+    top: 0;
+    bottom: 0;
+    /* background: linear-gradient(to top, rgb(255, 142, 142), transparent); */
+    display: flex;
+    flex-direction: column-reverse;
+}
+
+.player-data img {
+    height: 3em;
+    width: 3em;
+}
+
+.player-data .name {
+    writing-mode: vertical-rl;
+    line-height: 3em;
+    padding: 1em 0;
+    color: white;
+    text-shadow: black 0 1px, black 1px 0, black -1px 0 0, black 0 -1px 0;
+    font-weight: bold;
+}
+
+#soundEnabled {
+    outline: none;
+    appearance: none;
+    position: absolute;
+    display: block;
+    padding: 0.3em 0.6em;
+    background-color: rgb(203, 236, 255);
+    box-shadow: grey 4px 4px 0;
+    box-sizing: border-box;
+    cursor: pointer;
+    font-weight: bold;
+    color: dimgray;
+    z-index: 10;
+    user-select: none;
+    top: 1em;
+    right: 1em;
+}
+
+#soundEnabled:hover {
+    background-color: rgba(128, 128, 128, 0.49);
+}
+
+#soundEnabled:active {
+    box-shadow: grey 2px 2px 0;
+    transform: translate(2px, 2px);
+}
+
+#soundEnabledCross {
+    display: block;
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 50%;
+    height: 2px;
+    background-color: gray;
+    transform: translateY(-1px) rotate(45deg);
+}

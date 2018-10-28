@@ -1,0 +1,8 @@
+{
+    "compilerOptions": {
+        "module": "none",
+        "target": "es5",
+        "outFile": "./Tank/app.js",
+        "sourceMap": true
+    }
+}

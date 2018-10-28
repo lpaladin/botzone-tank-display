@@ -1,0 +1,6 @@
+{
+  "dependencies": {
+    "@types/gsap": "^1.19.2",
+    "@types/pixi.js": "^4.8.1"
+  }
+}

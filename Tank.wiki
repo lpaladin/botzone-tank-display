@@ -1,0 +1,1124 @@
+坦克大战(Tank)是[[Botzone]]平台上的双人回合制[[游戏]]。
+
+【通知】规则和样例程序于2018年10月18日15:30进行了修改，增加了“同一坦克不能连续两回合发射炮弹”的规则
+
+== 作者 ==
+
+裁判程序 & 播放器 ''zhouhy''
+
+== 故事 ==
+
+// 今年的故事咕咕咕了
+
+== 人类玩家操作说明 ==
+* 目前游戏仅支持鼠标
+** 在可以下达指令的时候，场地上会出现扎眼的白色按钮
+** 通过点选按钮可以给对应坦克下达指令
+** 指令一旦下达，不能撤销；给所有存活坦克下达指令后，会完成本回合
+
+== 游戏规则 ==
+
+本游戏为'''双人回合制'''游戏，两个玩家是'''对抗'''关系。
+
+两名玩家分别是：0 号玩家（蓝方），1 号玩家（红方）。
+
+游戏初始每名玩家控制两架坦克，打爆对方所有坦克或打爆基地后即可获得胜利。
+
+每回合，双方玩家同时决策，每个玩家需要给己方的所有存活坦克下达指令，如移动、发射炮弹、静止不动等。
+
+=== 地图和物件 ===
+
+游戏场地是高9格、宽9格的矩阵。在程序中，坐标是(x, y)的形式，其中x是横坐标，y是纵坐标。最左上方的格子的坐标是(0, 0)。
+
+游戏中的物件有：基地、砖块、钢墙、坦克。
+
+基地双方各一个，蓝方在上，红方在下。
+
+坦克双方各两个，分别记为 0 号坦克和 1 号坦克。蓝方左 0 右 1，红方左 1 右 0。
+
+游戏的地图是中心对称的。所有地图上固定存在的部分如下图所示。其他部分有随机产生的砖块。
+
+[[File:TankMapBase.png]]
+
+除了钢墙，游戏中的物件都可以被坦克发射的炮弹瞬间摧毁。钢墙是永远无法摧毁的。
+
+对于矩阵中的每个格子，可能有如下四种情况：
+
+* 空格子
+* 格子上有一个基地
+* 格子上有一个砖块
+* 格子上有一个钢墙
+* 格子上有一架或多架坦克
+
+=== 动作 ===
+
+对于每架坦克，可以执行的动作如下：
+
+{|
+! 动作 ID
+! 动作名
+! 动作描述
+! 动作条件
+|-
+| -1 || 不动 || 坦克一动不动 || 无条件
+|-
+| 0 || 向上移动 || 坦克向上移动一格 || 移动不会导致坦克越界，并且'''在下达指令的时刻目标格子没有任何物件'''
+|-
+| 1 || 向右移动 || 坦克向右移动一格 || 移动不会导致坦克越界，并且'''在下达指令的时刻目标格子没有任何物件'''
+|-
+| 2 || 向下移动 || 坦克向下移动一格 || 移动不会导致坦克越界，并且'''在下达指令的时刻目标格子没有任何物件'''
+|-
+| 3 || 向左移动 || 坦克向左移动一格 || 移动不会导致坦克越界，并且'''在下达指令的时刻目标格子没有任何物件'''
+|-
+| 4 || 向上发射炮弹 || 坦克向上发射炮弹，击中并摧毁射线（不含自己）上第一个非空格子上的所有物件（对射情况有特殊判断，见下） || '''上一回合该坦克未发射炮弹'''
+|-
+| 5 || 向右发射炮弹 || 坦克向右发射炮弹，击中并摧毁射线（不含自己）上第一个非空格子上的所有物件（对射情况有特殊判断，见下） || '''上一回合该坦克未发射炮弹'''
+|-
+| 6 || 向下发射炮弹 || 坦克向下发射炮弹，击中并摧毁射线（不含自己）上第一个非空格子上的所有物件（对射情况有特殊判断，见下） || '''上一回合该坦克未发射炮弹'''
+|-
+| 7 || 向左发射炮弹 || 坦克向左发射炮弹，击中并摧毁射线（不含自己）上第一个非空格子上的所有物件（对射情况有特殊判断，见下） || '''上一回合该坦克未发射炮弹'''
+|}
+
+'''发射炮弹时，仅有一条特殊判断规则（对射）'''：
+
+对于任意两架在同一回合执行发射炮弹动作的坦克，
+'''当且仅当'''两架坦克所在的格子均只有一架坦克（即无重叠）时，
+双方如果将互相摧毁，那么双方都依然存活（视为将双方动作改为“不动”）
+
+'''注意，由上可知'''
+* 多坦克同时向一个空格子移动是合法行为，结果是多架坦克重叠在这一个格子上。
+* 坦克发射的炮弹不分敌我。
+* 一架坦克一次发射一次炮弹可能摧毁多架重叠在一起的坦克。
+* 假设坦克 A 和坦克 B 同时向坦克 C 发射炮弹（坦克均无重叠），而坦克 C 发射的炮弹只能打到坦克 A，那么只有坦克 C 被摧毁。
+* 重叠的坦克被射击，永远会同时被摧毁。
+
+=== 每回合判定流程 ===
+
+在每回合双方都确定自己所有坦克的动作后：
+* 动作为移动的所有坦克向指定的方向移动一格。
+* 动作为发射炮弹的所有坦克：
+** 当前坦克 X 发射炮弹路径上的第一个非空格子 Y 上的所有物件会被标记为击中。
+*** 除非格子 X 和格子 Y 上均只有一架坦克，而且格子 Y 上的坦克的动作是向 X 所在方向发射炮弹。
+* 所有被标记为击中的物件会被摧毁。
+
+=== 胜负 ===
+
+一切非法行为会被立即判负，包括程序崩溃、超时、坐标越界、格式错误、非法操作等。双方同时判负会被认定为平局。
+
+基地被摧毁的一方会被判负。
+
+所有坦克被摧毁的一方会被判负。
+
+双方同时被判负则游戏平局。
+
+在游戏的第100回合结束时，如果胜负依旧没有发生变化，则双方平局。
+
+==游戏交互方式==
+
+'''与[[Botzone]]上其他游戏一样，本游戏每步（每次程序运行）限时1秒。具体规则请参看[[Bot]]词条或提交程序处的提示。'''
+
+'''如果希望在回合间传递数据，请参阅[[Bot#交互]]。'''
+
+===提示===
+
+'''如果你不能理解以下交互方式,可以直接看[[#样例程序]]，从 <code>main</code> 函数开始修改'''
+
+本游戏与Botzone上其他游戏一样，使用相同的交互方式：[[Bot#交互]]。
+
+本游戏只支持[[JSON]]交互。
+
+'''调试时可以通过拖动进度条来快速调试。'''
+
+===[[JSON]]交互===
+
+每回合[[Bot]]收到的request'''不是字符串'''，而是一个[[JSON]]数组或对象，格式如下：
+
+'''第一回合'''
+<syntaxhighlight lang="javascript">
+{
+	"field": [int1, int2, int3]， // 有三个 int 元素的数组。
+	// 数组中第 i 个 int 的第 j 位表示场地中坐标为 ((i * 27 + j) % 9, (i * 27 + j) / 9) 的格子是否有砖块。
+
+	"mySide": 0 或 1 // 告知自己是蓝方（0）还是红方（1）
+}
+</syntaxhighlight>
+
+'''其他回合'''
+<syntaxhighlight lang="javascript">
+[
+	action1, // 对方 0 号坦克在上回合的行动（如果坦克已经被摧毁，则该值没有意义；被摧毁坦克的值总是-1）
+	action2  // 对方 1 号坦克在上回合的行动（如果坦克已经被摧毁，则该值没有意义；被摧毁坦克的值总是-1）
+] // 有两个 int 元素的数组。
+</syntaxhighlight>
+
+Bot所需要输出的response也是[[JSON]]数组，格式如下：
+<syntaxhighlight lang="javascript">
+[
+	action1, // 我方 0 号坦克要进行的行动（如果坦克已经被摧毁，则该值会被忽略）
+	action2  // 我方 1 号坦克要进行的行动（如果坦克已经被摧毁，则该值会被忽略）
+] // 有两个 int 元素的数组。
+</syntaxhighlight>
+
+== 样例程序 ==
+
+建议仔细阅读样例程序的注释。
+
+'''请注意展开按钮在右侧！'''-----=====≡≡≡≡≡>
+
+=== C++ [[JSON]]交互样例程序 ===
+
+本地编译和调试的方式请查看 [[JSONCPP]]。
+
+样例程序提供了很方便的状态机工具，可以指定动作后推演局面，也可以回退(Revert)局面，可以参考。
+
+更新于2018年10月18日15:30，对新增的规则进行了处理。
+
+更新于2018年10月16日20:30，对DisappearLog结构体发生了修正。
+
+更新于2018年10月15日17:45，GetGameResult增加了对回合数超过100时平局的判断。
+
+更新于2018年10月15日14:14，DoAction函数中的对射处理进行了修正。
+
+<syntaxhighlight lang="cpp" class="mw-collapsible mw-collapsed">
+// Tank 游戏样例程序
+// 最后更新于2018年10月18日15:30
+// 随机策略
+// 作者：zhouhy
+// https://www.botzone.org.cn/games/Tank
+
+#include <stack>
+#include <set>
+#include <string>
+#include <iostream>
+#include <ctime>
+#include <cstring>
+#include "jsoncpp/json.h"
+
+using std::string;
+using std::cin;
+using std::cout;
+using std::endl;
+using std::flush;
+using std::getline;
+
+namespace TankGame
+{
+	using std::stack;
+	using std::set;
+	using std::istream;
+
+#ifdef _MSC_VER
+#pragma region 常量定义和说明
+#endif
+
+	enum GameResult
+	{
+		NotFinished = -2,
+		Draw = -1,
+		Blue = 0,
+		Red = 1
+	};
+
+	enum FieldItem
+	{
+		None = 0,
+		Brick = 1,
+		Steel = 2,
+		Base = 4,
+		Blue0 = 8,
+		Blue1 = 16,
+		Red0 = 32,
+		Red1 = 64
+	};
+
+	template<typename T> inline T operator~ (T a) { return (T)~(int)a; }
+	template<typename T> inline T operator| (T a, T b) { return (T)((int)a | (int)b); }
+	template<typename T> inline T operator& (T a, T b) { return (T)((int)a & (int)b); }
+	template<typename T> inline T operator^ (T a, T b) { return (T)((int)a ^ (int)b); }
+	template<typename T> inline T& operator|= (T& a, T b) { return (T&)((int&)a |= (int)b); }
+	template<typename T> inline T& operator&= (T& a, T b) { return (T&)((int&)a &= (int)b); }
+	template<typename T> inline T& operator^= (T& a, T b) { return (T&)((int&)a ^= (int)b); }
+
+	enum Action
+	{
+		Invalid = -2,
+		Stay = -1,
+		Up, Right, Down, Left,
+		UpShoot, RightShoot, DownShoot, LeftShoot
+	};
+
+	// 坐标左上角为原点（0, 0），x 轴向右延伸，y 轴向下延伸
+	// Side（对战双方） - 0 为蓝，1 为红
+	// Tank（每方的坦克） - 0 为 0 号坦克，1 为 1 号坦克
+	// Turn（回合编号） - 从 1 开始
+
+	const int fieldHeight = 9, fieldWidth = 9, sideCount = 2, tankPerSide = 2;
+
+	// 基地的横坐标
+	const int baseX[sideCount] = { fieldWidth / 2, fieldWidth / 2 };
+
+	// 基地的纵坐标
+	const int baseY[sideCount] = { 0, fieldHeight - 1 };
+
+	const int dx[4] = { 0, 1, 0, -1 }, dy[4] = { -1, 0, 1, 0 };
+	const FieldItem tankItemTypes[sideCount][tankPerSide] = {
+		{ Blue0, Blue1 },{ Red0, Red1 }
+	};
+
+#ifdef _MSC_VER
+#pragma endregion
+
+#pragma region 工具函数和类
+#endif
+
+	inline bool ActionIsMove(Action x)
+	{
+		return x >= Up && x <= Left;
+	}
+
+	inline bool ActionIsShoot(Action x)
+	{
+		return x >= UpShoot && x <= LeftShoot;
+	}
+
+	inline bool ActionDirectionIsOpposite(Action a, Action b)
+	{
+		return a >= Up && b >= Up && (a + 2) % 4 == b % 4;
+	}
+
+	inline bool CoordValid(int x, int y)
+	{
+		return x >= 0 && x < fieldWidth && y >= 0 && y < fieldHeight;
+	}
+
+	// 判断 item 是不是叠在一起的多个坦克
+	inline bool HasMultipleTank(FieldItem item)
+	{
+		// 如果格子上只有一个物件，那么 item 的值是 2 的幂或 0
+		// 对于数字 x，x & (x - 1) == 0 当且仅当 x 是 2 的幂或 0
+		return !!(item & (item - 1));
+	}
+
+	inline int GetTankSide(FieldItem item)
+	{
+		return item == Blue0 || item == Blue1 ? Blue : Red;
+	}
+
+	inline int GetTankID(FieldItem item)
+	{
+		return item == Blue0 || item == Red0 ? 0 : 1;
+	}
+
+	// 获得动作的方向
+	inline int ExtractDirectionFromAction(Action x)
+	{
+		if (x >= Up)
+			return x % 4;
+		return -1;
+	}
+
+	// 物件消失的记录，用于回退
+	struct DisappearLog
+	{
+		FieldItem item;
+
+		// 导致其消失的回合的编号
+		int turn;
+
+		int x, y;
+		bool operator< (const DisappearLog& b) const
+		{
+			if (x == b.x)
+			{
+				if (y == b.y)
+					return item < b.item;
+				return y < b.y;
+			}
+			return x < b.x;
+		}
+	};
+
+#ifdef _MSC_VER
+#pragma endregion
+
+#pragma region TankField 主要逻辑类
+#endif
+
+	class TankField
+	{
+	public:
+		//!//!//!// 以下变量设计为只读，不推荐进行修改 //!//!//!//
+
+		// 游戏场地上的物件（一个格子上可能有多个坦克）
+		FieldItem gameField[fieldHeight][fieldWidth] = {};
+
+		// 坦克是否存活
+		bool tankAlive[sideCount][tankPerSide] = { { true, true },{ true, true } };
+
+		// 基地是否存活
+		bool baseAlive[sideCount] = { true, true };
+
+		// 坦克横坐标，-1表示坦克已炸
+		int tankX[sideCount][tankPerSide] = {
+			{ fieldWidth / 2 - 2, fieldWidth / 2 + 2 },{ fieldWidth / 2 + 2, fieldWidth / 2 - 2 }
+		};
+
+		// 坦克纵坐标，-1表示坦克已炸
+		int tankY[sideCount][tankPerSide] = { { 0, 0 },{ fieldHeight - 1, fieldHeight - 1 } };
+
+		// 当前回合编号
+		int currentTurn = 1;
+
+		// 我是哪一方
+		int mySide;
+
+		// 用于回退的log
+		stack<DisappearLog> logs;
+
+		// 过往动作（previousActions[x] 表示所有人在第 x 回合的动作，第 0 回合的动作没有意义）
+		Action previousActions[101][sideCount][tankPerSide] = { { { Stay, Stay },{ Stay, Stay } } };
+
+		//!//!//!// 以上变量设计为只读，不推荐进行修改 //!//!//!//
+
+		// 本回合双方即将执行的动作，需要手动填入
+		Action nextAction[sideCount][tankPerSide] = { { Invalid, Invalid },{ Invalid, Invalid } };
+
+		// 判断行为是否合法（出界或移动到非空格子算作非法）
+		// 未考虑坦克是否存活
+		bool ActionIsValid(int side, int tank, Action act)
+		{
+			if (act == Invalid)
+				return false;
+			if (act > Left && previousActions[currentTurn - 1][side][tank] > Left) // 连续两回合射击
+				return false;
+			if (act == Stay || act > Left)
+				return true;
+			int x = tankX[side][tank] + dx[act],
+				y = tankY[side][tank] + dy[act];
+			return CoordValid(x, y) && gameField[y][x] == None;
+		}
+
+		// 判断 nextAction 中的所有行为是否都合法
+		// 忽略掉未存活的坦克
+		bool ActionIsValid()
+		{
+			for (int side = 0; side < sideCount; side++)
+				for (int tank = 0; tank < tankPerSide; tank++)
+					if (tankAlive[side][tank] && !ActionIsValid(side, tank, nextAction[side][tank]))
+						return false;
+			return true;
+		}
+
+	private:
+		void _destroyTank(int side, int tank)
+		{
+			tankAlive[side][tank] = false;
+			tankX[side][tank] = tankY[side][tank] = -1;
+		}
+
+		void _revertTank(int side, int tank, DisappearLog& log)
+		{
+			int &currX = tankX[side][tank], &currY = tankY[side][tank];
+			if (tankAlive[side][tank])
+				gameField[currY][currX] &= ~tankItemTypes[side][tank];
+			else
+				tankAlive[side][tank] = true;
+			currX = log.x;
+			currY = log.y;
+			gameField[currY][currX] |= tankItemTypes[side][tank];
+		}
+	public:
+
+		// 执行 nextAction 中指定的行为并进入下一回合，返回行为是否合法
+		bool DoAction()
+		{
+			if (!ActionIsValid())
+				return false;
+
+			// 1 移动
+			for (int side = 0; side < sideCount; side++)
+				for (int tank = 0; tank < tankPerSide; tank++)
+				{
+					Action act = nextAction[side][tank];
+
+					// 保存动作
+					previousActions[currentTurn][side][tank] = act;
+					if (tankAlive[side][tank] && ActionIsMove(act))
+					{
+						int &x = tankX[side][tank], &y = tankY[side][tank];
+						FieldItem &items = gameField[y][x];
+
+						// 记录 Log
+						DisappearLog log;
+						log.x = x;
+						log.y = y;
+						log.item = tankItemTypes[side][tank];
+						log.turn = currentTurn;
+						logs.push(log);
+
+						// 变更坐标
+						x += dx[act];
+						y += dy[act];
+
+						// 更换标记（注意格子可能有多个坦克）
+						gameField[y][x] |= log.item;
+						items &= ~log.item;
+					}
+				}
+
+			// 2 射♂击
+			set<DisappearLog> itemsToBeDestroyed;
+			for (int side = 0; side < sideCount; side++)
+				for (int tank = 0; tank < tankPerSide; tank++)
+				{
+					Action act = nextAction[side][tank];
+					if (tankAlive[side][tank] && ActionIsShoot(act))
+					{
+						int dir = ExtractDirectionFromAction(act);
+						int x = tankX[side][tank], y = tankY[side][tank];
+						bool hasMultipleTankWithMe = HasMultipleTank(gameField[y][x]);
+						while (true)
+						{
+							x += dx[dir];
+							y += dy[dir];
+							if (!CoordValid(x, y))
+								break;
+							FieldItem items = gameField[y][x];
+							if (items != None)
+							{
+								// 对射判断
+								if (items >= Blue0 &&
+									!hasMultipleTankWithMe && !HasMultipleTank(items))
+								{
+									// 自己这里和射到的目标格子都只有一个坦克
+									Action theirAction = nextAction[GetTankSide(items)][GetTankID(items)];
+									if (ActionIsShoot(theirAction) &&
+										ActionDirectionIsOpposite(act, theirAction))
+									{
+										// 而且我方和对方的射击方向是反的
+										// 那么就忽视这次射击
+										break;
+									}
+								}
+
+								// 标记这些物件要被摧毁了（防止重复摧毁）
+								for (int mask = 1; mask <= Red1; mask <<= 1)
+									if (items & mask)
+									{
+										DisappearLog log;
+										log.x = x;
+										log.y = y;
+										log.item = (FieldItem)mask;
+										log.turn = currentTurn;
+										itemsToBeDestroyed.insert(log);
+									}
+								break;
+							}
+						}
+					}
+				}
+
+			for (auto& log : itemsToBeDestroyed)
+			{
+				switch (log.item)
+				{
+				case Base:
+				{
+					int side = log.x == baseX[Blue] && log.y == baseY[Blue] ? Blue : Red;
+					baseAlive[side] = false;
+					break;
+				}
+				case Blue0:
+					_destroyTank(Blue, 0);
+					break;
+				case Blue1:
+					_destroyTank(Blue, 1);
+					break;
+				case Red0:
+					_destroyTank(Red, 0);
+					break;
+				case Red1:
+					_destroyTank(Red, 1);
+					break;
+				case Steel:
+					continue;
+				default:
+					;
+				}
+				gameField[log.y][log.x] &= ~log.item;
+				logs.push(log);
+			}
+
+			for (int side = 0; side < sideCount; side++)
+				for (int tank = 0; tank < tankPerSide; tank++)
+					nextAction[side][tank] = Invalid;
+
+			currentTurn++;
+			return true;
+		}
+
+		// 回到上一回合
+		bool Revert()
+		{
+			if (currentTurn == 1)
+				return false;
+
+			currentTurn--;
+			while (!logs.empty())
+			{
+				DisappearLog& log = logs.top();
+				if (log.turn == currentTurn)
+				{
+					logs.pop();
+					switch (log.item)
+					{
+					case Base:
+					{
+						int side = log.x == baseX[Blue] && log.y == baseY[Blue] ? Blue : Red;
+						baseAlive[side] = true;
+						gameField[log.y][log.x] = Base;
+						break;
+					}
+					case Brick:
+						gameField[log.y][log.x] = Brick;
+						break;
+					case Blue0:
+						_revertTank(Blue, 0, log);
+						break;
+					case Blue1:
+						_revertTank(Blue, 1, log);
+						break;
+					case Red0:
+						_revertTank(Red, 0, log);
+						break;
+					case Red1:
+						_revertTank(Red, 1, log);
+						break;
+					default:
+						;
+					}
+				}
+				else
+					break;
+			}
+			return true;
+		}
+
+		// 游戏是否结束？谁赢了？
+		GameResult GetGameResult()
+		{
+			bool fail[sideCount] = {};
+			for (int side = 0; side < sideCount; side++)
+				if ((!tankAlive[side][0] && !tankAlive[side][1]) || !baseAlive[side])
+					fail[side] = true;
+			if (fail[0] == fail[1])
+				return fail[0] || currentTurn > 100 ? Draw : NotFinished;
+			if (fail[Blue])
+				return Red;
+			return Blue;
+		}
+
+		// 三个 int 表示场地 01 矩阵（每个 int 用 27 位表示 3 行）
+		TankField(int hasBrick[3], int mySide) : mySide(mySide)
+		{
+			for (int i = 0; i < 3; i++)
+			{
+				int mask = 1;
+				for (int y = i * 3; y < (i + 1) * 3; y++)
+				{
+					for (int x = 0; x < fieldWidth; x++)
+					{
+						if (hasBrick[i] & mask)
+							gameField[y][x] = Brick;
+						mask <<= 1;
+					}
+				}
+			}
+			for (int side = 0; side < sideCount; side++)
+			{
+				for (int tank = 0; tank < tankPerSide; tank++)
+					gameField[tankY[side][tank]][tankX[side][tank]] = tankItemTypes[side][tank];
+				gameField[baseY[side]][baseX[side]] = Base;
+			}
+			gameField[baseY[0] + 1][baseX[0]] = gameField[baseY[1] - 1][baseX[1]] = Steel;
+		}
+
+		// 打印场地
+		void DebugPrint()
+		{
+#ifndef _BOTZONE_ONLINE
+			const string side2String[] = { "蓝", "红" };
+			const string boolean2String[] = { "已炸", "存活" };
+			const char* boldHR = "==============================";
+			const char* slimHR = "------------------------------";
+			cout << boldHR << endl
+				<< "图例：" << endl
+				<< ". - 空\t# - 砖\t% - 钢\t* - 基地\t@ - 多个坦克" << endl
+				<< "b - 蓝0\tB - 蓝1\tr - 红0\tR - 红1" << endl
+				<< slimHR << endl;
+			for (int y = 0; y < fieldHeight; y++)
+			{
+				for (int x = 0; x < fieldWidth; x++)
+				{
+					switch (gameField[y][x])
+					{
+					case None:
+						cout << '.';
+						break;
+					case Brick:
+						cout << '#';
+						break;
+					case Steel:
+						cout << '%';
+						break;
+					case Base:
+						cout << '*';
+						break;
+					case Blue0:
+						cout << 'b';
+						break;
+					case Blue1:
+						cout << 'B';
+						break;
+					case Red0:
+						cout << 'r';
+						break;
+					case Red1:
+						cout << 'R';
+						break;
+					default:
+						cout << '@';
+						break;
+					}
+				}
+				cout << endl;
+			}
+			cout << slimHR << endl;
+			for (int side = 0; side < sideCount; side++)
+			{
+				cout << side2String[side] << "：基地" << boolean2String[baseAlive[side]];
+				for (int tank = 0; tank < tankPerSide; tank++)
+					cout << ", 坦克" << tank << boolean2String[tankAlive[side][tank]];
+				cout << endl;
+			}
+			cout << "当前回合：" << currentTurn << "，";
+			GameResult result = GetGameResult();
+			if (result == -2)
+				cout << "游戏尚未结束" << endl;
+			else if (result == -1)
+				cout << "游戏平局" << endl;
+			else
+				cout << side2String[result] << "方胜利" << endl;
+			cout << boldHR << endl;
+#endif
+		}
+	};
+
+#ifdef _MSC_VER
+#pragma endregion
+#endif
+
+	TankField *field;
+
+#ifdef _MSC_VER
+#pragma region 与平台交互部分
+#endif
+
+	// 内部函数
+	namespace Internals
+	{
+		Json::Reader reader;
+#ifdef _BOTZONE_ONLINE
+		Json::FastWriter writer;
+#else
+		Json::StyledWriter writer;
+#endif
+
+		void _processRequestOrResponse(Json::Value& value, bool isOpponent)
+		{
+			if (value.isArray())
+			{
+				if (!isOpponent)
+				{
+					for (int tank = 0; tank < tankPerSide; tank++)
+						field->nextAction[field->mySide][tank] = (Action)value[tank].asInt();
+				}
+				else
+				{
+					for (int tank = 0; tank < tankPerSide; tank++)
+						field->nextAction[1 - field->mySide][tank] = (Action)value[tank].asInt();
+					field->DoAction();
+				}
+			}
+			else
+			{
+				// 是第一回合，裁判在介绍场地
+				int hasBrick[3];
+				for (int i = 0; i < 3; i++)
+					hasBrick[i] = value["field"][i].asInt();
+				field = new TankField(hasBrick, value["mySide"].asInt());
+			}
+		}
+
+		// 请使用 SubmitAndExit 或者 SubmitAndDontExit
+		void _submitAction(Action tank0, Action tank1, string debug = "", string data = "", string globalData = "")
+		{
+			Json::Value output(Json::objectValue), response(Json::arrayValue);
+			response[0U] = tank0;
+			response[1U] = tank1;
+			output["response"] = response;
+			if (!debug.empty())
+				output["debug"] = debug;
+			if (!data.empty())
+				output["data"] = data;
+			if (!globalData.empty())
+				output["globalData"] = globalData;
+			cout << writer.write(output) << endl;
+		}
+	}
+
+	// 从输入流（例如 cin 或者 fstream）读取回合信息，存入 TankField，并提取上回合存储的 data 和 globaldata
+	// 本地调试的时候支持多行，但是最后一行需要以没有缩进的一个"}"或"]"结尾
+	void ReadInput(istream& in, string& outData, string& outGlobalData)
+	{
+		Json::Value input;
+		string inputString;
+		do
+		{
+			getline(in, inputString);
+		} while (inputString.empty());
+#ifndef _BOTZONE_ONLINE
+		// 猜测是单行还是多行
+		char lastChar = inputString[inputString.size() - 1];
+		if (lastChar != '}' && lastChar != ']')
+		{
+			// 第一行不以}或]结尾，猜测是多行
+			string newString;
+			do
+			{
+				getline(in, newString);
+				inputString += newString;
+			} while (newString != "}" && newString != "]");
+		}
+#endif
+		Internals::reader.parse(inputString, input);
+
+		if (input.isObject())
+		{
+			Json::Value requests = input["requests"], responses = input["responses"];
+			if (!requests.isNull() && requests.isArray())
+			{
+				size_t i, n = requests.size();
+				for (i = 0; i < n; i++)
+				{
+					Internals::_processRequestOrResponse(requests[i], true);
+					if (i < n - 1)
+						Internals::_processRequestOrResponse(responses[i], false);
+				}
+				outData = input["data"].asString();
+				outGlobalData = input["globaldata"].asString();
+				return;
+			}
+		}
+		Internals::_processRequestOrResponse(input, true);
+	}
+
+	// 提交决策并退出，下回合时会重新运行程序
+	void SubmitAndExit(Action tank0, Action tank1, string debug = "", string data = "", string globalData = "")
+	{
+		Internals::_submitAction(tank0, tank1, debug, data, globalData);
+		exit(0);
+	}
+
+	// 提交决策，下回合时程序继续运行（需要在 Botzone 上提交 Bot 时选择“允许长时运行”）
+	// 如果游戏结束，程序会被系统杀死
+	void SubmitAndDontExit(Action tank0, Action tank1)
+	{
+		Internals::_submitAction(tank0, tank1);
+		field->nextAction[field->mySide][0] = tank0;
+		field->nextAction[field->mySide][1] = tank1;
+		cout << ">>>BOTZONE_REQUEST_KEEP_RUNNING<<<" << endl;
+	}
+#ifdef _MSC_VER
+#pragma endregion
+#endif
+}
+
+int RandBetween(int from, int to)
+{
+	return rand() % (to - from) + from;
+}
+
+TankGame::Action RandAction(int tank)
+{
+	while (true)
+	{
+		auto act = (TankGame::Action)RandBetween(TankGame::Stay, TankGame::LeftShoot + 1);
+		if (TankGame::field->ActionIsValid(TankGame::field->mySide, tank, act))
+			return act;
+	}
+}
+
+int main()
+{
+	srand((unsigned)time(nullptr));
+	while (true)
+	{
+		string data, globaldata;
+		TankGame::ReadInput(cin, data, globaldata);
+		TankGame::SubmitAndDontExit(RandAction(0), RandAction(1));
+	}
+}
+</syntaxhighlight>
+
+=== Python 3.6 [[JSON]]交互样例程序 ===
+
+更新于2018年10月25日20:41，修正了TankField的__init__函数最后放置钢块的坐标写反了的问题。
+
+<syntaxhighlight lang="Python" class="mw-collapsible mw-collapsed">
+# Tank 游戏样例程序
+# 随机策略
+# 作者：zhouhy
+# https://www.botzone.org.cn/games/Tank
+import json
+import sys
+import random
+from typing import List
+
+FIELD_HEIGHT = 9
+FIELD_WIDTH = 9
+SIDE_COUNT = 2
+TANK_PER_SIDE = 2
+
+dx = [ 0, 1, 0, -1 ]
+dy = [ -1, 0, 1, 0 ]
+
+class FieldItemType():
+	Nil = 0
+	Brick = 1
+	Steel = 2
+	Base = 3
+	Tank = 4
+
+class Action():
+	Invalid = -2
+	Stay = -1
+	Up = 0
+	Right = 1
+	Down = 2
+	Left = 3
+	UpShoot = 4
+	RightShoot = 5
+	DownShoot = 6
+	LeftShoot = 7
+
+class WhoWins():
+	NotFinished = -2
+	Draw = -1
+	Blue = 0
+	Red = 1
+
+class FieldObject:
+	def __init__(self, x: int, y: int, itemType: FieldItemType):
+		self.x = x
+		self.y = y
+		self.itemType = itemType
+		self.destroyed = False
+
+class Base(FieldObject):
+	def __init__(self, side: int):
+		super().__init__(4, side * 8, FieldItemType.Base)
+		self.side = side
+
+class Tank(FieldObject):
+	def __init__(self, side: int, tankID: int):
+		super().__init__(6 if side ^ tankID else 2, side * 8, FieldItemType.Tank)
+		self.side = side
+		self.tankID = tankID
+
+class TankField:
+
+	def __init__(self):
+		self.fieldContent = [
+			[[] for x in range(FIELD_WIDTH)] for y in range(FIELD_HEIGHT)
+		]
+		self.tanks = [[Tank(s, t) for t in range(TANK_PER_SIDE)] for s in range(SIDE_COUNT)]
+		self.bases = [Base(s) for s in range(SIDE_COUNT)]
+		self.lastActions = [[Action.Invalid for t in range(TANK_PER_SIDE)] for s in range(SIDE_COUNT)]
+		self.actions = [[Action.Invalid for t in range(TANK_PER_SIDE)] for s in range(SIDE_COUNT)]
+		self.currentTurn = 1
+
+		for tanks in self.tanks:
+			for tank in tanks:
+				self.insertFieldItem(tank)
+		for base in self.bases:
+			self.insertFieldItem(base)
+		self.insertFieldItem(FieldObject(4, 1, FieldItemType.Steel))
+		self.insertFieldItem(FieldObject(4, 7, FieldItemType.Steel))
+
+	def insertFieldItem(self, item: FieldObject):
+		self.fieldContent[item.y][item.x].append(item)
+		item.destroyed = False
+
+	def removeFieldItem(self, item: FieldObject):
+		self.fieldContent[item.y][item.x].remove(item)
+		item.destroyed = True
+
+	def fromBinary(self, bricks: List[int]):
+		for i in range(3):
+			mask = 1
+			for y in range(i * 3, i * 3 + 3):
+				for x in range(FIELD_WIDTH):
+					if bricks[i] & mask:
+						self.insertFieldItem(FieldObject(x, y, FieldItemType.Brick))
+					mask = mask << 1
+
+	def actionValid(self, side: int, tank: int, action: Action) -> bool:
+		if action >= Action.UpShoot and self.lastActions[side][tank] >= Action.UpShoot:
+			return False
+		if action == Action.Stay or action >= Action.UpShoot:
+			return True
+		x = self.tanks[side][tank].x + dx[action]
+		y = self.tanks[side][tank].y + dy[action]
+		return self.inRange(x, y) and not self.fieldContent[y][x]
+		
+	def allValid(self) -> bool:
+		for tanks in self.tanks:
+			for tank in tanks:
+				if not tank.destroyed and not self.actionValid(tank.side, tank.tankID, self.actions[tank.side][tank.tankID]):
+					return False
+		return True
+
+	def inRange(self, x: int, y: int) -> bool:
+		return x >= 0 and x < FIELD_WIDTH and y >= 0 and y < FIELD_HEIGHT
+
+	def setActions(self, side: int, actions: List[int]) -> bool:
+		if self.actionValid(side, 0, actions[0]) and self.actionValid(side, 1, actions[1]):
+			self.actions[side] = actions
+			return True
+		return False
+
+	def doActions(self) -> bool:
+		if not self.allValid():
+			return False
+
+		self.lastActions = self.actions.copy()
+
+		for tanks in self.tanks:
+			for tank in tanks:
+				action = self.actions[tank.side][tank.tankID]
+				if not tank.destroyed and action >= Action.Up and action < Action.UpShoot:
+					self.removeFieldItem(tank)
+					tank.x = tank.x + dx[action]
+					tank.y = tank.y + dy[action]
+					self.insertFieldItem(tank)
+
+		itemsToBeDestroyed = set()
+
+		for tanks in self.tanks:
+			for tank in tanks:
+				action = self.actions[tank.side][tank.tankID]
+				if not tank.destroyed and action >= Action.UpShoot:
+					x = tank.x
+					y = tank.y
+					action = action % 4
+					multipleTankWithMe = len(self.fieldContent[y][x]) > 1
+					while True:
+						x = x + dx[action]
+						y = y + dy[action]
+						if not self.inRange(x, y):
+							break
+						collides = self.fieldContent[y][x]
+						if collides:
+							if not multipleTankWithMe and len(collides) == 1 and collides[0].itemType == FieldItemType.Tank:
+								oppAction = self.actions[collides[0].side][collides[0].tankID]
+								if oppAction >= Action.UpShoot and action == (oppAction + 2) % 4:
+									break
+							itemsToBeDestroyed.update(collides)
+							break
+		
+		for item in itemsToBeDestroyed:
+			if item.itemType != FieldItemType.Steel:
+				self.removeFieldItem(item)
+
+		self.currentTurn = self.currentTurn + 1
+		self.actions = [[Action.Invalid for t in range(TANK_PER_SIDE)] for s in range(SIDE_COUNT)]
+
+	def sideLose(self, side: int) -> bool:
+		return (self.tanks[side][0].destroyed and self.tanks[side][1].destroyed) or self.bases[side].destroyed
+
+	def whoWins(self) -> WhoWins:
+		fail = [self.sideLose(s) for s in range(SIDE_COUNT)]
+		if fail[0] == fail[1]:
+			return WhoWins.Draw if fail[0] or self.currentTurn > 100 else WhoWins.NotFinished
+		if fail[0]:
+			return WhoWins.Red
+		return WhoWins.Blue
+
+class BotzoneIO:
+	def __init__(self, longRunning = False):
+		self.longRunning = longRunning
+		self.mySide = -1
+		self.data = None
+		self.globaldata = None
+
+	def _processItem(self, field: TankField, item, isOpponent: bool):
+		if isinstance(item, dict):
+			self.mySide = item['mySide']
+			field.fromBinary(item['field'])
+		elif isOpponent:
+			field.setActions(1 - self.mySide, item)
+			field.doActions()
+		else:
+			field.setActions(self.mySide, item)
+
+	def readInput(self, field: TankField):
+		string = input()
+		obj = json.loads(string)
+		if 'requests' in obj:
+			requests = obj['requests']
+			responses = obj['responses']
+			n = len(requests)
+			for i in range(n):
+				self._processItem(field, requests[i], True)
+				if i < n - 1:
+					self._processItem(field, responses[i], False)
+
+			if 'data' in obj:
+				self.data = obj['data']
+			if 'globaldata' in obj:
+				self.globaldata = obj['globaldata']
+		else:
+			self._processItem(field, obj, True)
+
+	def writeOutput(self, actions: List[Action], debug: str = None, data: str = None, globaldata: str = None, exitAfterOutput = False):
+		print(json.dumps({
+			'response': actions,
+			'debug': debug,
+			'data': data,
+			'globaldata': globaldata
+		}))
+		if exitAfterOutput:
+			exit(0)
+		else:
+			print(">>>BOTZONE_REQUEST_KEEP_RUNNING<<<")
+			sys.stdout.flush()
+
+if __name__ == '__main__':
+	field = TankField()
+	io = BotzoneIO()
+	while True:
+		io.readInput(field)
+
+		myActions = []
+		for tank in range(TANK_PER_SIDE):
+			availableActions = [
+ 				action for action in range(Action.Stay, Action.LeftShoot + 1) if field.actionValid(io.mySide, tank, action)
+			]
+			myActions.append(random.choice(availableActions))
+
+		io.writeOutput(myActions, "DEBUG!", io.data, io.globaldata, False)
+		field.setActions(io.mySide, myActions)
+			
+
+</syntaxhighlight>
