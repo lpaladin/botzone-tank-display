@@ -10,11 +10,17 @@ enum Action {
 }
 type PlayerAction = [Action, Action];
 type FieldBinary = [number, number, number];
-type DisplayLog = {
+type FieldDisplay = {
+	brick: FieldBinary;
+	water: FieldBinary;
+	steel: FieldBinary;
+};
+type NormalDisplay = {
 	"0"?: PlayerAction;
 	"1"?: PlayerAction;
 	loseReason?: [string, string];
-} | FieldBinary;
+};
+type DisplayLog = NormalDisplay | FieldDisplay;
 
 // 准备库环境
 if (typeof infoProvider !== 'undefined') {
@@ -35,6 +41,17 @@ if (typeof infoProvider !== 'undefined') {
 			setRenderTickCallback: (cb: Function) => TweenMax.ticker.addEventListener('tick', cb)
 		}
 	};
+
+class TickableManager {
+	tickables: ITickable[] = [];
+
+	doTick() {
+		for (const tickable of this.tickables)
+			tickable.onTick();
+	}
+}
+
+const tickableManager = new TickableManager();
 
 // 定义一个格子长宽为1
 class TankGame {
@@ -93,7 +110,10 @@ class TankGame {
 		window.addEventListener('resize', () => this.resize());
 
 		// 开始渲染
-		infoProvider.v2.setRenderTickCallback(() => this.renderer.render(this.field));
+		infoProvider.v2.setRenderTickCallback(() => {
+			this.renderer.render(this.field);
+			tickableManager.doTick();
+		});
 		infoProvider.v2.setRequestCallback(req => {
 			for (const tank of this.field.tanks[this.playerSide]) {
 				if (tank.alive) {
@@ -117,8 +137,8 @@ class TankGame {
 		infoProvider.v2.setDisplayCallback((d: DisplayLog) => {
 			DOM.elements.tank0panel.style.display = "none";
 			DOM.elements.tank1panel.style.display = "none";
-			if (Array.isArray(d)) {
-				this.field.constructBricks(d);
+			if ('brick' in d) {
+				this.field.constructField(d);
 				return null;
 			}
 			const tl = new TimelineMax();
@@ -177,6 +197,7 @@ class TankGame {
 				DOM.playSound(DOM.elements.victorySound, tl);
 				tl.fromTo(DOM.elements.result, 0.5, { scale: 0, opacity: 0 }, { scale: 1, opacity: 1, ease: Back.easeOut });
 			}
+			tl.call(() => undefined, null, null, 1);
 			return tl;
 		});
 		infoProvider.v2.notifyInitComplete();

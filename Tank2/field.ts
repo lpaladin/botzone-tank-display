@@ -3,22 +3,28 @@ class GameField extends PIXI.Graphics {
 	static readonly FIELD_WIDTH = 9;
 
 	// 左上为原点
-	fieldContent: (Base | Brick | Tank[])[][] = new Array(GameField.FIELD_HEIGHT);
+	fieldContent: (Base | Brick | Water | Tank[])[][] = new Array(GameField.FIELD_HEIGHT);
 
 	tanks: Tank[][];
 	lastActions: PlayerAction[] = [[Action.Stay, Action.Stay], [Action.Stay, Action.Stay]];
 
-	constructBricks(bricks: FieldBinary) {
-		for (let i = 0; i < 3; i++) {
-			let mask = 1;
-			for (let y = i * 3; y < (i + 1) * 3; y++) {
-				for (let x = 0; x < GameField.FIELD_WIDTH; x++) {
-					if (bricks[i] & mask)
-						this.fieldContent[y][x] = new Brick();
-					mask <<= 1;
+	constructField(d: FieldDisplay) {
+		const def: { ctor: new () => FieldItem, name: keyof FieldDisplay }[] = [
+			{ ctor: Brick, name: 'brick' },
+			{ ctor: Steel, name: 'steel' },
+			{ ctor: Water, name: 'water' }
+		];
+		for (const { ctor, name } of def)
+			for (let i = 0; i < 3; i++) {
+				let mask = 1;
+				for (let y = i * 3; y < (i + 1) * 3; y++) {
+					for (let x = 0; x < GameField.FIELD_WIDTH; x++) {
+						if (d[name][i] & mask)
+							this.fieldContent[y][x] = new ctor();
+						mask <<= 1;
+					}
 				}
 			}
-		}
 
 		// 把所有物件的坐标设置好，并加入场景
 		for (let r = 0; r < GameField.FIELD_HEIGHT; r++)
@@ -46,10 +52,8 @@ class GameField extends PIXI.Graphics {
 			this.fieldContent[r] = new Array(GameField.FIELD_WIDTH);
 
 		this.fieldContent[0][4] = new Base(0);
-		this.fieldContent[1][4] = new Steel();
 
 		this.fieldContent[8][4] = new Base(1);
-		this.fieldContent[7][4] = new Steel();
 
 		this.tanks = [
 			[
@@ -112,6 +116,9 @@ class GameField extends PIXI.Graphics {
 	}
 
 	insertFieldItem(item: FieldItem) {
+		if (!this.inRange(item.c, item.r)) {
+			return;
+		}
 		const nextSlot = this.fieldContent[item.r][item.c];
 		if (item instanceof Tank) {
 			if (nextSlot && Array.isArray(nextSlot)) {
@@ -156,7 +163,7 @@ class GameField extends PIXI.Graphics {
 				break;
 			}
 			collides = this.fieldContent[y][x];
-			if (collides) {
+			if (collides && !(collides instanceof Water)) {
 				if (Array.isArray(collides)) {
 					if (!multipleTankWithMe && collides.length == 1) {
 						const oppAction = (allAction[collides[0].side] || {})[collides[0].tank];

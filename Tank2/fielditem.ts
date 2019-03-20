@@ -41,6 +41,21 @@ class Steel extends FieldItem {
 	}
 }
 
+class Water extends FieldItem implements ITickable {
+	static TEXTURES: PIXI.Texture[];
+	private idx = 0;
+	
+	onTick() {
+		this.idx = (this.idx + 1) % 30;
+		this.texture = Water.TEXTURES[Math.floor(this.idx / 10)];
+	}
+
+	constructor() {
+		super(Water.TEXTURES[0]);
+		tickableManager.tickables.push(this);
+	}
+}
+
 class Tank extends FieldItem {
 	static TEXTURES: PIXI.Texture[][][]; // side - tank - frame
 	private frames: PIXI.Texture[];

@@ -16,3 +16,7 @@ interface Window {
     Back?: typeof gsap.Back;
     Quad?: typeof gsap.Quad;
 }
+
+interface ITickable {
+    onTick: () => void;
+}
