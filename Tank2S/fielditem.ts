@@ -41,6 +41,13 @@ class Steel extends FieldItem {
 	}
 }
 
+class Forest extends FieldItem {
+	static TEXTURE: PIXI.Texture;
+	constructor() {
+		super(Forest.TEXTURE);
+	}
+}
+
 class Water extends FieldItem implements ITickable {
 	static TEXTURES: PIXI.Texture[];
 	private idx = 0;

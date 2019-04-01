@@ -42,6 +42,7 @@ namespace Assets {
 		);
 		Brick.TEXTURE = new PIXI.Texture(baseTexture, new PIXI.Rectangle(256, 0, 16, 16));
 		Steel.TEXTURE = new PIXI.Texture(baseTexture, new PIXI.Rectangle(256, 16, 16, 16));
+		Forest.TEXTURE = new PIXI.Texture(baseTexture, new PIXI.Rectangle(272, 32, 16, 16));
 		Water.TEXTURES = [
 			new PIXI.Texture(baseTexture, new PIXI.Rectangle(256, 32, 16, 16)),
 			new PIXI.Texture(baseTexture, new PIXI.Rectangle(256, 48, 16, 16)),

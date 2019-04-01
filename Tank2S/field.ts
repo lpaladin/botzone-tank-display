@@ -4,14 +4,17 @@ class GameField extends PIXI.Graphics {
 
 	// 左上为原点
 	fieldContent: (Base | Brick | Water | Tank[])[][] = new Array(GameField.FIELD_HEIGHT);
+	forests: Forest[][] = new Array(GameField.FIELD_HEIGHT);
 
 	tanks: Tank[][];
+	indicators: Indicator[][];
 	lastActions: PlayerAction[] = [[Action.Stay, Action.Stay], [Action.Stay, Action.Stay]];
 
 	constructField(d: FieldDisplay) {
 		const def: { ctor: new () => FieldItem, name: keyof FieldDisplay }[] = [
 			{ ctor: Brick, name: 'brick' },
 			{ ctor: Steel, name: 'steel' },
+			{ ctor: Forest, name: 'forest' },
 			{ ctor: Water, name: 'water' }
 		];
 		for (const { ctor, name } of def)
@@ -20,7 +23,7 @@ class GameField extends PIXI.Graphics {
 				for (let y = i * 3; y < (i + 1) * 3; y++) {
 					for (let x = 0; x < GameField.FIELD_WIDTH; x++) {
 						if (d[name][i] & mask)
-							this.fieldContent[y][x] = new ctor();
+							(ctor === Forest ? this.forests : this.fieldContent)[y][x] = new ctor();
 						mask <<= 1;
 					}
 				}
@@ -41,15 +44,32 @@ class GameField extends PIXI.Graphics {
 					item.c = item.x = c;
 					this.addChild(item);
 				}
+				const forest = this.forests[r][c];
+				if (forest) {
+					forest.r = forest.y = r;
+					forest.c = forest.x = c;
+					this.addChild(forest);
+				}
 			}
 		this.addChild<PIXI.Sprite>(...Bullet.STORAGE.all, ...ExplodeEffect.STORAGE.all);
+	}
+
+	updateViewpoint(fromSide: number) {
+		for (let side = 0; side < 2; side++) {
+			for (const item of this.indicators[side]) {
+				if (fromSide !== -1 && fromSide !== side)
+					item.alpha = 0;
+			}
+		}
 	}
 
 	constructor() {
 		super();
 		
-		for (let r = 0; r < GameField.FIELD_HEIGHT; r++)
+		for (let r = 0; r < GameField.FIELD_HEIGHT; r++) {
 			this.fieldContent[r] = new Array(GameField.FIELD_WIDTH);
+			this.forests[r] = new Array(GameField.FIELD_WIDTH);
+		}
 
 		this.fieldContent[0][4] = new Base(0);
 
@@ -65,6 +85,18 @@ class GameField extends PIXI.Graphics {
 				(this.fieldContent[8][2] = [new Tank(1, 1, 0)])[0]
 			]
 		];
+		this.indicators = [
+			[new Indicator(Colors.WHITE), new Indicator(Colors.GREEN)],
+			[new Indicator(Colors.YELLOW), new Indicator(Colors.RED)]
+		];
+		for (const items of this.indicators) {
+			for (const item of items) {
+				item.x = -2;
+				item.y = -2;
+				this.addChild(item);
+			}
+		}
+		this.updateViewpoint(infoProvider.isLive() ? infoProvider.getPlayerID() : -1);
 	
 		let w = this.width = GameField.FIELD_WIDTH;
 		let h = this.height = GameField.FIELD_HEIGHT;
@@ -135,9 +167,26 @@ class GameField extends PIXI.Graphics {
 		const tank = this.tanks[side][tankID];
 		const dir = action;
 		const tl = new TimelineMax();
+
+		const toR = tank.r + Util.dy[dir];
+		const toC = tank.c + Util.dx[dir];
 		tl.add(Util.biDirectionConstantSet(tank, ["direction", dir]));
 		tl.fromTo(tank, 0.5, { x: tank.c, y: tank.r, moveProgress: 0 },
-			{ x: tank.c + Util.dx[dir], y: tank.r + Util.dy[dir], moveProgress: 1, ease: Linear.easeNone, immediateRender: false });
+			{ x: toC, y: toR, moveProgress: 1, ease: Linear.easeNone, immediateRender: false });
+		
+		const fromHasForest = this.forests[tank.r] && this.forests[tank.r][tank.c];
+		const toHasForest = this.forests[toR] && this.forests[toR][toC];
+		if (fromHasForest || toHasForest) {
+			tl.fromTo(this.indicators[side][tankID], 0.5,
+				{ x: tank.c, y: tank.r }, { x: toC, y: toR, ease: Linear.easeNone }, "-=0.5");
+		}
+		if (fromHasForest && !toHasForest) {
+			tl.fromTo(tank, 0.5, { alpha: 0 }, { alpha: 1 }, "-=0.5");
+			tl.add(Util.biDirectionConstantSet(this.indicators[side][tankID], ["x", -2], ["y", -2]));
+		} else if (!fromHasForest && toHasForest) {
+			tl.fromTo(tank, 0.5, { alpha: 1 }, { alpha: 0 }, "-=0.5");
+		}
+		
 		this.removeFieldItem(tank);
 		tank.c += Util.dx[dir];
 		tank.r += Util.dy[dir];

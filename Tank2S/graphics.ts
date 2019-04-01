@@ -61,10 +61,10 @@ class Indicator extends PIXI.Graphics {
 	static readonly THICKNESS = 0.1;
 	static readonly CORNER_PERCENTAGE = 0.4;
 
-	constructor() {
+	constructor(color: number) {
 		super();
 		let corner = Math.floor(Indicator.CORNER_PERCENTAGE);
-		this.lineStyle(Indicator.THICKNESS, Colors.GREEN, 0.5);
+		this.lineStyle(Indicator.THICKNESS, color, 0.5);
 
 		this.moveTo(0, corner);
 		this.lineTo(0, 0);

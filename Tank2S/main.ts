@@ -13,11 +13,12 @@ type FieldBinary = [number, number, number];
 type FieldDisplay = {
 	brick: FieldBinary;
 	water: FieldBinary;
+	forest: FieldBinary;
 	steel: FieldBinary;
 };
 type NormalDisplay = {
-	"0"?: PlayerAction;
-	"1"?: PlayerAction;
+	"0"?: { action: PlayerAction };
+	"1"?: { action: PlayerAction };
 	loseReason?: [string, string];
 };
 type DisplayLog = NormalDisplay | FieldDisplay;
@@ -149,8 +150,8 @@ class TankGame {
 						return Assets.err2chn[reason];
 					if (reason == "INVALID_INPUT_VERDICT_OK") {
 						const validateResult =
-							this.field.validateAction(i, 0, d[i][0]) ||
-							this.field.validateAction(i, 1, d[i][1]);
+							this.field.validateAction(i, 0, d[i].action[0]) ||
+							this.field.validateAction(i, 1, d[i].action[1]);
 						return validateResult || Assets.err2chn[reason];
 					}
 					return Assets.err2chn[reason];
@@ -158,23 +159,23 @@ class TankGame {
 			}
 
 			this.field.eachAliveTank(tank => {
-				const action = d[tank.side] && d[tank.side][tank.tank];
+				const action = d[tank.side] && d[tank.side].action[tank.tank];
 				if (typeof action === "number" && action >= Action.Up && action < Action.UpShoot) {
 					tl.add(this.field.doMove(tank.side, tank.tank, action), 0);
 				}
 			});
 
 			this.field.eachAliveTank(tank => {
-				const action = d[tank.side] && d[tank.side][tank.tank];
+				const action = d[tank.side] && d[tank.side].action[tank.tank];
 				if (typeof action === "number" && action >= Action.UpShoot) {
-					tl.add(this.field.doShoot(tank.side, tank.tank, action, [d[0], d[1]]), 0);
+					tl.add(this.field.doShoot(tank.side, tank.tank, action, [d[0].action, d[1].action]), 0);
 					DOM.playSound(DOM.elements.shootSound, tl, 0);
 				}
 			});
 
 			tl.add(this.field.finalize());
 
-			this.field.lastActions = [d[0], d[1]];
+			this.field.lastActions = [d[0].action, d[1].action];
 
 			if (reasons) {
 				if (reasons[0] && reasons[1]) {
@@ -200,6 +201,7 @@ class TankGame {
 			tl.call(() => undefined, null, null, 1);
 			return tl;
 		});
+		infoProvider.v2.setGameOverCallback(() => (this.field.updateViewpoint(-1), null));
 		infoProvider.v2.notifyInitComplete();
 	}
 

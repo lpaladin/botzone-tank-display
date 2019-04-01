@@ -2,7 +2,7 @@
     "compilerOptions": {
         "module": "none",
         "target": "es5",
-        "outFile": "./Tank2/app.js",
+        "outFile": "./Tank2S/app.js",
         "sourceMap": true
     }
 }
