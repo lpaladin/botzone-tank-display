@@ -30,6 +30,7 @@ class GameField extends PIXI.Graphics {
 			}
 
 		// 把所有物件的坐标设置好，并加入场景
+		// 先放坦克
 		for (let r = 0; r < GameField.FIELD_HEIGHT; r++)
 			for (let c = 0; c < GameField.FIELD_WIDTH; c++) {
 				const item = this.fieldContent[r][c];
@@ -39,7 +40,13 @@ class GameField extends PIXI.Graphics {
 						tank.c = tank.x = c;
 						this.addChild(tank);
 					}
-				} else if (item) {
+				}
+			}
+		// 再放其他
+		for (let r = 0; r < GameField.FIELD_HEIGHT; r++)
+			for (let c = 0; c < GameField.FIELD_WIDTH; c++) {
+				const item = this.fieldContent[r][c];
+				if (item && !Array.isArray(item)) {
 					item.r = item.y = r;
 					item.c = item.x = c;
 					this.addChild(item);
@@ -178,8 +185,8 @@ class GameField extends PIXI.Graphics {
 		const fromHasForest = this.forests[tank.r] && this.forests[tank.r][tank.c];
 		const toHasForest = this.forests[toR] && this.forests[toR][toC];
 		if (fromHasForest || toHasForest) {
-			tl.fromTo(this.indicators[side][tankID], 0.5,
-				{ x: tank.c, y: tank.r }, { x: toC, y: toR, ease: Linear.easeNone }, "-=0.5");
+			tl.fromTo(this.indicators[side][tankID], 0.5, { x: tank.c + 0.5, y: tank.r + 0.5 },
+				{ x: toC + 0.5, y: toR + 0.5, ease: Linear.easeNone, immediateRender: false }, "-=0.5");
 		}
 		if (fromHasForest && !toHasForest) {
 			tl.fromTo(tank, 0.5, { alpha: 0 }, { alpha: 1 }, "-=0.5");
@@ -266,6 +273,7 @@ class GameField extends PIXI.Graphics {
 			tl.add(Util.biDirectionConstantSet(item, ["destroyed", true]), 0.25);
 			if (item instanceof Tank) {
 				item.alive = false;
+				tl.add(Util.biDirectionConstantSet(this.indicators[item.side][item.tank], ["x", -2], ["y", -2]));
 			}
 			if (item instanceof Tank || item instanceof Base) {
 				DOM.playSound(DOM.elements.destroyLargeSound, tl, 0);

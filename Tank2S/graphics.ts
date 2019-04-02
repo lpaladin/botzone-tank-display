@@ -57,14 +57,23 @@ class Bullet extends PIXI.Sprite {
 	}
 }
 
-class Indicator extends PIXI.Graphics {
+class Indicator extends PIXI.Graphics implements ITickable {
 	static readonly THICKNESS = 0.1;
 	static readonly CORNER_PERCENTAGE = 0.4;
+	private idx = 0;
+
+	onTick() {
+		this.idx = (this.idx + 1) % 30;
+		const s = 0.8 + Math.floor(Math.abs(this.idx - 15) / 3) / 25;
+		this.scale.set(s, s);
+	}
 
 	constructor(color: number) {
 		super();
-		let corner = Math.floor(Indicator.CORNER_PERCENTAGE);
-		this.lineStyle(Indicator.THICKNESS, color, 0.5);
+		this.pivot.set(0.5, 0.5);
+		this.scale.set(0.8, 0.8);
+		const corner = Indicator.CORNER_PERCENTAGE;
+		this.lineStyle(Indicator.THICKNESS, color, 1);
 
 		this.moveTo(0, corner);
 		this.lineTo(0, 0);
@@ -78,5 +87,7 @@ class Indicator extends PIXI.Graphics {
 		this.moveTo(corner, 1);
 		this.lineTo(0, 1);
 		this.lineTo(0, 1 - corner);
+
+		tickableManager.tickables.push(this);
 	}
 }

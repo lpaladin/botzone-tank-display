@@ -280,6 +280,7 @@ var GameField = /** @class */ (function (_super) {
             }
         }
         // 把所有物件的坐标设置好，并加入场景
+        // 先放坦克
         for (var r = 0; r < GameField.FIELD_HEIGHT; r++)
             for (var c = 0; c < GameField.FIELD_WIDTH; c++) {
                 var item = this.fieldContent[r][c];
@@ -291,7 +292,12 @@ var GameField = /** @class */ (function (_super) {
                         this.addChild(tank);
                     }
                 }
-                else if (item) {
+            }
+        // 再放其他
+        for (var r = 0; r < GameField.FIELD_HEIGHT; r++)
+            for (var c = 0; c < GameField.FIELD_WIDTH; c++) {
+                var item = this.fieldContent[r][c];
+                if (item && !Array.isArray(item)) {
                     item.r = item.y = r;
                     item.c = item.x = c;
                     this.addChild(item);
@@ -383,7 +389,7 @@ var GameField = /** @class */ (function (_super) {
         var fromHasForest = this.forests[tank.r] && this.forests[tank.r][tank.c];
         var toHasForest = this.forests[toR] && this.forests[toR][toC];
         if (fromHasForest || toHasForest) {
-            tl.fromTo(this.indicators[side][tankID], 0.5, { x: tank.c, y: tank.r }, { x: toC, y: toR, ease: Linear.easeNone }, "-=0.5");
+            tl.fromTo(this.indicators[side][tankID], 0.5, { x: tank.c + 0.5, y: tank.r + 0.5 }, { x: toC + 0.5, y: toR + 0.5, ease: Linear.easeNone, immediateRender: false }, "-=0.5");
         }
         if (fromHasForest && !toHasForest) {
             tl.fromTo(tank, 0.5, { alpha: 0 }, { alpha: 1 }, "-=0.5");
@@ -472,6 +478,7 @@ var GameField = /** @class */ (function (_super) {
             tl.add(Util.biDirectionConstantSet(item, ["destroyed", true]), 0.25);
             if (item instanceof Tank) {
                 item.alive = false;
+                tl.add(Util.biDirectionConstantSet(this.indicators[item.side][item.tank], ["x", -2], ["y", -2]));
             }
             if (item instanceof Tank || item instanceof Base) {
                 DOM.playSound(DOM.elements.destroyLargeSound, tl, 0);
@@ -674,8 +681,11 @@ var Indicator = /** @class */ (function (_super) {
     __extends(Indicator, _super);
     function Indicator(color) {
         var _this = _super.call(this) || this;
-        var corner = Math.floor(Indicator.CORNER_PERCENTAGE);
-        _this.lineStyle(Indicator.THICKNESS, color, 0.5);
+        _this.idx = 0;
+        _this.pivot.set(0.5, 0.5);
+        _this.scale.set(0.8, 0.8);
+        var corner = Indicator.CORNER_PERCENTAGE;
+        _this.lineStyle(Indicator.THICKNESS, color, 1);
         _this.moveTo(0, corner);
         _this.lineTo(0, 0);
         _this.lineTo(corner, 0);
@@ -688,8 +698,14 @@ var Indicator = /** @class */ (function (_super) {
         _this.moveTo(corner, 1);
         _this.lineTo(0, 1);
         _this.lineTo(0, 1 - corner);
+        tickableManager.tickables.push(_this);
         return _this;
     }
+    Indicator.prototype.onTick = function () {
+        this.idx = (this.idx + 1) % 30;
+        var s = 0.8 + Math.floor(Math.abs(this.idx - 15) / 3) / 25;
+        this.scale.set(s, s);
+    };
     Indicator.THICKNESS = 0.1;
     Indicator.CORNER_PERCENTAGE = 0.4;
     return Indicator;
