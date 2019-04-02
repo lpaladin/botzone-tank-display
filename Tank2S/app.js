@@ -211,7 +211,7 @@ var __extends = (this && this.__extends) || (function () {
             ({ __proto__: [] } instanceof Array && function (d, b) { d.__proto__ = b; }) ||
             function (d, b) { for (var p in b) if (b.hasOwnProperty(p)) d[p] = b[p]; };
         return extendStatics(d, b);
-    }
+    };
     return function (d, b) {
         extendStatics(d, b);
         function __() { this.constructor = d; }
@@ -247,15 +247,6 @@ var GameField = /** @class */ (function (_super) {
             [new Indicator(Colors.WHITE), new Indicator(Colors.GREEN)],
             [new Indicator(Colors.YELLOW), new Indicator(Colors.RED)]
         ];
-        for (var _i = 0, _a = _this.indicators; _i < _a.length; _i++) {
-            var items = _a[_i];
-            for (var _b = 0, items_1 = items; _b < items_1.length; _b++) {
-                var item = items_1[_b];
-                item.x = -2;
-                item.y = -2;
-                _this.addChild(item);
-            }
-        }
         _this.updateViewpoint(infoProvider.isLive() ? infoProvider.getPlayerID() : -1);
         var w = _this.width = GameField.FIELD_WIDTH;
         var h = _this.height = GameField.FIELD_HEIGHT;
@@ -313,6 +304,15 @@ var GameField = /** @class */ (function (_super) {
                 }
             }
         this.addChild.apply(this, Bullet.STORAGE.all.concat(ExplodeEffect.STORAGE.all));
+        for (var _c = 0, _d = this.indicators; _c < _d.length; _c++) {
+            var items = _d[_c];
+            for (var _e = 0, items_1 = items; _e < items_1.length; _e++) {
+                var item = items_1[_e];
+                item.x = -2;
+                item.y = -2;
+                this.addChild(item);
+            }
+        }
     };
     GameField.prototype.updateViewpoint = function (fromSide) {
         for (var side = 0; side < 2; side++) {

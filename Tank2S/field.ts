@@ -52,6 +52,14 @@ class GameField extends PIXI.Graphics {
 				}
 			}
 		this.addChild<PIXI.Sprite>(...Bullet.STORAGE.all, ...ExplodeEffect.STORAGE.all);
+		
+		for (const items of this.indicators) {
+			for (const item of items) {
+				item.x = -2;
+				item.y = -2;
+				this.addChild(item);
+			}
+		}
 	}
 
 	updateViewpoint(fromSide: number) {
@@ -89,13 +97,6 @@ class GameField extends PIXI.Graphics {
 			[new Indicator(Colors.WHITE), new Indicator(Colors.GREEN)],
 			[new Indicator(Colors.YELLOW), new Indicator(Colors.RED)]
 		];
-		for (const items of this.indicators) {
-			for (const item of items) {
-				item.x = -2;
-				item.y = -2;
-				this.addChild(item);
-			}
-		}
 		this.updateViewpoint(infoProvider.isLive() ? infoProvider.getPlayerID() : -1);
 	
 		let w = this.width = GameField.FIELD_WIDTH;
