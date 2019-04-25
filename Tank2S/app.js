@@ -342,8 +342,13 @@ var GameField = /** @class */ (function (_super) {
         if (action == Action.Stay || action >= Action.UpShoot)
             return false;
         var x = this.tanks[side][tank].c + Util.dx[action], y = this.tanks[side][tank].r + Util.dy[action];
-        if (this.inRange(x, y) && !this.fieldContent[y][x])
-            return false;
+        if (this.inRange(x, y)) {
+            if (!this.fieldContent[y][x])
+                return false;
+            var otherTank = this.tanks[side][1 - tank];
+            if (this.forests[y][x] && (!otherTank.alive || otherTank.c != x || otherTank.r != y))
+                return false;
+        }
         return "移动目标不可达";
     };
     GameField.prototype.inRange = function (x, y) {
@@ -392,11 +397,11 @@ var GameField = /** @class */ (function (_super) {
             tl.fromTo(this.indicators[side][tankID], 0.5, { x: tank.c + 0.5, y: tank.r + 0.5 }, { x: toC + 0.5, y: toR + 0.5, ease: Linear.easeNone, immediateRender: false }, "-=0.5");
         }
         if (fromHasForest && !toHasForest) {
-            tl.fromTo(tank, 0.5, { alpha: 0 }, { alpha: 1 }, "-=0.5");
+            tl.fromTo(tank, 0.5, { alpha: 0 }, { alpha: 1, immediateRender: false }, "-=0.5");
             tl.add(Util.biDirectionConstantSet(this.indicators[side][tankID], ["x", -2], ["y", -2]));
         }
         else if (!fromHasForest && toHasForest) {
-            tl.fromTo(tank, 0.5, { alpha: 1 }, { alpha: 0 }, "-=0.5");
+            tl.fromTo(tank, 0.5, { alpha: 1 }, { alpha: 0, immediateRender: false }, "-=0.5");
         }
         this.removeFieldItem(tank);
         tank.c += Util.dx[dir];
@@ -859,12 +864,15 @@ var TankGame = /** @class */ (function () {
             _this.field.eachAliveTank(function (tank) {
                 var action = d[tank.side] && d[tank.side].action[tank.tank];
                 if (typeof action === "number" && action >= Action.UpShoot) {
-                    tl.add(_this.field.doShoot(tank.side, tank.tank, action, [d[0].action, d[1].action]), 0);
+                    tl.add(_this.field.doShoot(tank.side, tank.tank, action, [
+                        (d[0] || { action: [Action.Stay, Action.Stay] }).action,
+                        (d[1] || { action: [Action.Stay, Action.Stay] }).action
+                    ]), 0);
                     DOM.playSound(DOM.elements.shootSound, tl, 0);
                 }
             });
             tl.add(_this.field.finalize());
-            _this.field.lastActions = [d[0].action, d[1].action];
+            _this.field.lastActions = [d[0] && d[0].action, d[1] && d[1].action];
             if (reasons) {
                 if (reasons[0] && reasons[1]) {
                     DOM.elements.resultTitle.textContent = "平局";

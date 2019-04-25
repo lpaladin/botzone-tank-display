@@ -132,8 +132,13 @@ class GameField extends PIXI.Graphics {
 			return false;
 		const x = this.tanks[side][tank].c + Util.dx[action],
 			y = this.tanks[side][tank].r + Util.dy[action];
-		if (this.inRange(x, y) && !this.fieldContent[y][x])
-			return false;
+		if (this.inRange(x, y)) {
+			if (!this.fieldContent[y][x])
+				return false;
+			const otherTank = this.tanks[side][1 - tank];
+			if (this.forests[y][x] && (!otherTank.alive || otherTank.c != x || otherTank.r != y))
+				return false;
+		}
 		return "移动目标不可达";
 	}
 
@@ -189,10 +194,10 @@ class GameField extends PIXI.Graphics {
 				{ x: toC + 0.5, y: toR + 0.5, ease: Linear.easeNone, immediateRender: false }, "-=0.5");
 		}
 		if (fromHasForest && !toHasForest) {
-			tl.fromTo(tank, 0.5, { alpha: 0 }, { alpha: 1 }, "-=0.5");
+			tl.fromTo(tank, 0.5, { alpha: 0 }, { alpha: 1, immediateRender: false }, "-=0.5");
 			tl.add(Util.biDirectionConstantSet(this.indicators[side][tankID], ["x", -2], ["y", -2]));
 		} else if (!fromHasForest && toHasForest) {
-			tl.fromTo(tank, 0.5, { alpha: 1 }, { alpha: 0 }, "-=0.5");
+			tl.fromTo(tank, 0.5, { alpha: 1 }, { alpha: 0, immediateRender: false }, "-=0.5");
 		}
 		
 		this.removeFieldItem(tank);

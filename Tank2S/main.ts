@@ -168,14 +168,20 @@ class TankGame {
 			this.field.eachAliveTank(tank => {
 				const action = d[tank.side] && d[tank.side].action[tank.tank];
 				if (typeof action === "number" && action >= Action.UpShoot) {
-					tl.add(this.field.doShoot(tank.side, tank.tank, action, [d[0].action, d[1].action]), 0);
+					tl.add(this.field.doShoot(
+						tank.side, tank.tank, action,
+						[
+							(d[0] || { action: [Action.Stay, Action.Stay] }).action,
+							(d[1] || { action: [Action.Stay, Action.Stay] }).action
+						]
+					), 0);
 					DOM.playSound(DOM.elements.shootSound, tl, 0);
 				}
 			});
 
 			tl.add(this.field.finalize());
 
-			this.field.lastActions = [d[0].action, d[1].action];
+			this.field.lastActions = [d[0] && d[0].action, d[1] && d[1].action];
 
 			if (reasons) {
 				if (reasons[0] && reasons[1]) {
